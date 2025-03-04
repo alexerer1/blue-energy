@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "resolveJsonModule": true,
+    "jsx": "react-jsx", // Required for modern React JSX transformation
+    "lib": ["dom", "es6"], // Ensure DOM and ES6 are included in TypeScript
+    "target": "es6", // Specifies ECMAScript target version
+    "module": "ESNext",
+    "strict": true, // Enable strict type-checking
+    "moduleResolution": "node",
+    "esModuleInterop": true, // Enables compatibility with CommonJS modules
+    "skipLibCheck": true, // Skip type checks for external modules
+    "forceConsistentCasingInFileNames": true
+  }
+}

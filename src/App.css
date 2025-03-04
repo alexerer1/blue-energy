@@ -1,0 +1,79 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.App {
+  text-align: center;
+}
+
+.App-logo {
+  height: 40vmin;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .App-logo {
+    animation: App-logo-spin infinite 20s linear;
+  }
+}
+
+.App-header {
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+.App-link {
+  color: #61dafb;
+}
+
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes loading-bar {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(300%);
+  }
+}
+
+.animate-loading-bar {
+  animation: loading-bar 1.5s infinite linear;
+}
+body {
+  font-family: "DINNextLTPro-Regular", "Helvetica Neue", Helvetica, Roboto,
+    Arial, sans-serif;
+  }
+
+
+
+
+  .list-disc {
+    list-style-type: disc;
+    margin-left: 1.5rem;
+  }
+  
+  .list-decimal {
+    list-style-type: decimal;
+    margin-left: 1.5rem;
+  }
+  
+  blockquote {
+    border-left: 4px solid #ddd;
+    padding-left: 1rem;
+    font-style: italic;
+  }
+  
