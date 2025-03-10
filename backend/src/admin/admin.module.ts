@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AdminController } from './admin.controller';
-import { AdminService } from './admin.service';
 import { Setting } from '../entities/setting.entity';
 import { DataRecord } from '../entities/data-record.entity';
+import { AdminController } from './admin.controller';
+import { AdminService } from './admin.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Setting, DataRecord])],

@@ -9,25 +9,28 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppModule = void 0;
 const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
-const schedule_1 = require("@nestjs/schedule");
-const data_processing_module_1 = require("./data-processing/data-processing.module");
-const data_retrieval_module_1 = require("./data-retrieval/data-retrieval.module");
-const admin_module_1 = require("./admin/admin.module");
+const setting_entity_1 = require("./settings/entities/setting.entity");
+const files_module_1 = require("./files/files.module");
+const readings_module_1 = require("./readings/readings.module");
+const scheduler_module_1 = require("./scheduler/scheduler.module");
+const settings_module_1 = require("./settings/settings.module");
+const file_record_entity_1 = require("./files/entities/file-record.entity");
+const reading_entity_1 = require("./readings/entities/reading.entity");
 let AppModule = class AppModule {
 };
 AppModule = __decorate([
     (0, common_1.Module)({
         imports: [
-            schedule_1.ScheduleModule.forRoot(),
             typeorm_1.TypeOrmModule.forRoot({
                 type: 'sqlite',
-                database: 'database.sqlite',
-                entities: [__dirname + '/**/*.entity{.ts,.js}'],
+                database: 'src/data/database.sqlite',
+                entities: [file_record_entity_1.FileRecord, reading_entity_1.Reading, setting_entity_1.Setting],
                 synchronize: true,
             }),
-            data_processing_module_1.DataProcessingModule,
-            data_retrieval_module_1.DataRetrievalModule,
-            admin_module_1.AdminModule,
+            files_module_1.FilesModule,
+            readings_module_1.ReadingsModule,
+            scheduler_module_1.SchedulerModule,
+            settings_module_1.SettingsModule,
         ],
     })
 ], AppModule);

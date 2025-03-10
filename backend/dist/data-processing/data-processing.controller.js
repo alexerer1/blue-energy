@@ -11,7 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DataProcessingController = void 0;
 const common_1 = require("@nestjs/common");
-const data_processing_service_1 = require("./data-processing.service");
+const scheduler_service_1 = require("./scheduler.service");
 let DataProcessingController = class DataProcessingController {
     constructor(dataProcessingService) {
         this.dataProcessingService = dataProcessingService;
@@ -29,6 +29,6 @@ __decorate([
 ], DataProcessingController.prototype, "processFiles", null);
 DataProcessingController = __decorate([
     (0, common_1.Controller)('process'),
-    __metadata("design:paramtypes", [data_processing_service_1.DataProcessingService])
+    __metadata("design:paramtypes", [scheduler_service_1.DataProcessingService])
 ], DataProcessingController);
 exports.DataProcessingController = DataProcessingController;

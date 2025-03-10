@@ -1,13 +1,10 @@
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 
 @Entity()
-export class DataRecord {
+export class Setting {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ length: 255 })
-  fileName!: string;
-
-  @Column({ type: 'text' })
-  content!: string;
+  @Column()
+  inputDirectory!: string;
 }

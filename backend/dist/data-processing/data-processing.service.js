@@ -45,10 +45,13 @@ const data_record_entity_1 = require("../entities/data-record.entity");
 const setting_entity_1 = require("../entities/setting.entity");
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
+const parse_log_file_1 = require("./helpers/parse-log-file");
+const reading_entity_1 = require("../readings/entities/reading.entity");
 let DataProcessingService = DataProcessingService_1 = class DataProcessingService {
-    constructor(dataRecordRepo, settingRepo) {
+    constructor(dataRecordRepo, settingRepo, readingRepo) {
         this.dataRecordRepo = dataRecordRepo;
         this.settingRepo = settingRepo;
+        this.readingRepo = readingRepo;
         this.logger = new common_1.Logger(DataProcessingService_1.name);
     }
     async handleCron() {
@@ -70,20 +73,53 @@ let DataProcessingService = DataProcessingService_1 = class DataProcessingServic
             for (const file of files) {
                 const filePath = path.join(inputDirectory, file);
                 const stats = fs.statSync(filePath);
-                if (stats.isFile()) {
-                    const fileContent = fs.readFileSync(filePath, 'utf8');
-                    const record = this.dataRecordRepo.create({
-                        fileName: file,
-                        content: fileContent,
-                    });
-                    await this.dataRecordRepo.save(record);
-                }
+                if (!stats.isFile())
+                    continue;
+                const fileContent = fs.readFileSync(filePath, 'utf8');
+                const record = this.dataRecordRepo.create({
+                    fileName: file,
+                    content: fileContent,
+                });
+                await this.dataRecordRepo.save(record);
+                const dateFromFile = this.extractDateFromFilename(file);
+                const parsed = (0, parse_log_file_1.parseLogFile)(fileContent, dateFromFile);
+                await this.saveParsedReadings(parsed, file);
+                this.logger.log(`Processed file: ${file}`);
             }
             this.logger.log(`Processed ${files.length} file(s).`);
         }
         catch (error) {
             this.logger.error('Error processing files', error);
         }
+    }
+    extractDateFromFilename(fileName) {
+        const match = fileName.match(/(\d{4})(\d{2})(\d{2})/);
+        if (!match) {
+            return new Date();
+        }
+        const [_, yyyy, mm, dd] = match;
+        const year = parseInt(yyyy, 10);
+        const month = parseInt(mm, 10) - 1;
+        const day = parseInt(dd, 10);
+        return new Date(year, month, day);
+    }
+    async saveParsedReadings(parsed, sourceFile) {
+        if (!parsed || !parsed.length)
+            return;
+        const toSave = parsed.map((r) => {
+            const entity = new reading_entity_1.Reading();
+            entity.sourceFile = sourceFile;
+            entity.timestamp = r.timestamp;
+            entity.statusRaw = r.statusRaw;
+            entity.headtankLevel = r.headtankLevel;
+            entity.temperatureLevel = r.temperatureLevel;
+            entity.batteryLevel = r.batteryLevel;
+            entity.ACvoltLevel = r.ACvoltLevel;
+            entity.enabledLoads = r.enabledLoads;
+            entity.balast = r.balast;
+            return entity;
+        });
+        await this.readingRepo.save(toSave);
     }
 };
 __decorate([
@@ -96,7 +132,9 @@ DataProcessingService = DataProcessingService_1 = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(data_record_entity_1.DataRecord)),
     __param(1, (0, typeorm_1.InjectRepository)(setting_entity_1.Setting)),
+    __param(2, (0, typeorm_1.InjectRepository)(reading_entity_1.Reading)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository,
         typeorm_2.Repository])
 ], DataProcessingService);
 exports.DataProcessingService = DataProcessingService;

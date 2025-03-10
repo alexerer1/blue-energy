@@ -1,26 +1,28 @@
-// data-processing.service.ts
-
+// src/scheduler/scheduler.service.ts
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { DataRecord } from '../entities/data-record.entity';
-import { Setting } from '../entities/setting.entity';
+
+// If you renamed DataRecord → FileRecord:
+import { FileRecord } from '../files/entities/file-record.entity';
+import { Reading } from '../readings/entities/reading.entity';
+import { Setting } from '../settings/entities/setting.entity'; // if you have a Setting entity
 
 import * as fs from 'fs';
 import * as path from 'path';
 
 import { parseLogFile } from './helpers/parse-log-file';
 import { ParsedReading } from '../data/interfaces/parsed-reading.interface';
-import { Reading } from '../data/entities/reading.entity';
+// Example interface if you store parsed data
 
 @Injectable()
-export class DataProcessingService {
-  private readonly logger = new Logger(DataProcessingService.name);
+export class SchedulerService {
+  private readonly logger = new Logger(SchedulerService.name);
 
   constructor(
-    @InjectRepository(DataRecord)
-    private readonly dataRecordRepo: Repository<DataRecord>,
+    @InjectRepository(FileRecord)
+    private readonly fileRecordRepo: Repository<FileRecord>,
 
     @InjectRepository(Setting)
     private readonly settingRepo: Repository<Setting>,
@@ -29,9 +31,12 @@ export class DataProcessingService {
     private readonly readingRepo: Repository<Reading>
   ) {}
 
+  /**
+   * Cron job triggered every 30 minutes
+   */
   @Cron(CronExpression.EVERY_30_MINUTES)
   async handleCron() {
-    this.logger.log('Running data processing cron job');
+    this.logger.log('Running scheduled file processing...');
     await this.processDataFiles();
   }
 
@@ -42,9 +47,10 @@ export class DataProcessingService {
     try {
       // 1) Find the directory from settings or default
       let inputDirectory = './data/input'; // default
-      const dirSetting = await this.settingRepo.findOneBy({ key: 'inputDirectory' });
-      if (dirSetting) {
-        inputDirectory = dirSetting.value;
+      // Attempt to fetch the single Setting row (with id = 1, for example)
+      const setting = await this.settingRepo.findOne({ where: { id: 1 } });
+      if (setting && setting.inputDirectory) {
+        inputDirectory = setting.inputDirectory;
       }
 
       if (!fs.existsSync(inputDirectory)) {
@@ -54,31 +60,31 @@ export class DataProcessingService {
 
       // 2) Read files in directory
       const files = fs.readdirSync(inputDirectory);
-
       for (const file of files) {
         const filePath = path.join(inputDirectory, file);
         const stats = fs.statSync(filePath);
-        if (!stats.isFile()) continue;
+        if (!stats.isFile()) {
+          continue;
+        }
 
         // 3) Read content
         const fileContent = fs.readFileSync(filePath, 'utf8');
 
-        // 4) (optional) store raw DataRecord
-        const record = this.dataRecordRepo.create({
+        // 4) Store raw file record in DB
+        const record = this.fileRecordRepo.create({
           fileName: file,
           content: fileContent,
         });
-        await this.dataRecordRepo.save(record);
+        await this.fileRecordRepo.save(record);
 
-        // 5) Parse the file to get structured readings
-        //    We'll guess the date from the filename. E.g. "20230305_..." => "2023-03-05"
+        // 5) Parse structured readings
         const dateFromFile = this.extractDateFromFilename(file);
-        const parsed = parseLogFile(fileContent, dateFromFile);
+        const parsedReadings = parseLogFile(fileContent, dateFromFile);
 
-        // 6) Store readings in DB
-        await this.saveParsedReadings(parsed, file);
+        // 6) Save readings
+        await this.saveParsedReadings(parsedReadings, file);
 
-        // 7) Move or delete the file afterward as needed
+        // 7) Optionally move or delete the file
         // fs.unlinkSync(filePath);
 
         this.logger.log(`Processed file: ${file}`);
@@ -86,36 +92,30 @@ export class DataProcessingService {
 
       this.logger.log(`Processed ${files.length} file(s).`);
     } catch (error) {
-      this.logger.error('Error processing files', error);
+      this.logger.error('Error processing files:', error);
     }
   }
 
   /**
-   * A small helper that tries to parse a date (YYYYMMDD) from the filename.
-   * You can tailor this to your own naming convention.
+   * Attempt to parse date from filename (YYYYMMDD).
+   * Fallback to "now" if none found.
    */
   private extractDateFromFilename(fileName: string): Date {
-    // e.g. if file name is "20250106_something.txt" or "20250106.log"
     const match = fileName.match(/(\d{4})(\d{2})(\d{2})/);
     if (!match) {
-      // fallback to "today" if parsing fails
       return new Date();
     }
     const [_, yyyy, mm, dd] = match;
-    const year = parseInt(yyyy, 10);
-    const month = parseInt(mm, 10) - 1; // zero-based
-    const day = parseInt(dd, 10);
-    return new Date(year, month, day);
+    return new Date(parseInt(yyyy, 10), parseInt(mm, 10) - 1, parseInt(dd, 10));
   }
 
   /**
-   * Save the parsed readings into your Reading entity
-   * or any custom entity you might have.
+   * Convert the parsed logs into Reading entities and save them.
    */
   private async saveParsedReadings(parsed: ParsedReading[], sourceFile: string): Promise<void> {
-    if (!parsed || !parsed.length) return;
-
-    // Convert each `ParsedReading` into a Reading entity
+    if (!parsed || !parsed.length) {
+      return;
+    }
     const toSave = parsed.map((r) => {
       const entity = new Reading();
       entity.sourceFile = sourceFile;
@@ -129,7 +129,6 @@ export class DataProcessingService {
       entity.balast = r.balast;
       return entity;
     });
-
     await this.readingRepo.save(toSave);
   }
 }
